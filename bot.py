@@ -88,7 +88,7 @@ class VKinderBot:
 
     def get_matches(self, age_from, age_to, gender, city_id, marital_status):
         matches = []
-        for user in self.vk.users.search(count=1000, fields='photo_max_orig', city=city_id, sex=self.get_gender_id(gender),
+        for user in self.vk.users.search(count=50, fields='photo_max_orig', city=city_id, sex=self.get_gender_id(gender),
                                           status=self.get_marital_status_id(marital_status), age_from=age_from, age_to=age_to)['items']:
             if user['id'] not in self.db.get_matches(user_id):
                 matches.append(user)
