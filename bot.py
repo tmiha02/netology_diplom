@@ -54,23 +54,34 @@ class VKinderBot:
         return age_from, age_to
 
     def ask_user_gender(self, user_id):
-        while True:
-            self.send_message(user_id, "Каков пол твоей потенциальной пары? (мужчина/женщина)")
-            gender = self.get_user_message(user_id).lower()
-            if gender in ('мужчина', 'женщина'):
-                return gender
-            else:
-                self.send_message(user_id, "Неверный ввод. Пожалуйста, попробуй еще раз.")
+        user_info = self.get_profile_info(user_id)
+        if user_info['sex'] == 1:
+            return 'мужчина'
+        elif user_info['sex'] == 2:
+            return 'женщина'
+        else:
+            while True:
+                self.send_message(user_id, "Каков пол твоей потенциальной пары? (мужчина/женщина)")
+                gender = self.get_user_message(user_id).lower()
+                if gender in ('мужчина', 'женщина'):
+                    return gender
+                else:
+                    self.send_message(user_id, "Неверный ввод. Пожалуйста, попробуй еще раз.")
 
     def ask_user_city(self, user_id):
-        while True:
-            self.send_message(user_id, "Каков город твоего потенциального партнера? (Например, Москва, Санкт-Петербург)")
-            city_name = self.get_user_message(user_id)
-            try:
-                city_id = self.vk.database.getCities(country_id=1, q=city_name)['items'][0]['id']
-                return city_id
-            except (IndexError, vk_api.exceptions.ApiError):
-                self.send_message(user_id, "Неверный ввод. Пожалуйста, попробуй еще раз.")
+        user_info = self.get_profile_info(user_id)
+        if 'city' in user_info:
+            return user_info['city']
+        else:
+            while True:
+                try:
+                    self.send_message(user_id,
+                                      "Каков город твоего потенциального партнера? (Например, Москва, Санкт-Петербург)")
+                    city_name = self.get_user_message(user_id)
+                    city_id = self.vk.database.getCities(country_id=1, q=city_name)['items'][0]['id']
+                    return city_id
+                except vk_api.exceptions.VkException:
+                    self.send_message(user_id, "Неверный ввод. Пожалуйста, попробуй еще раз.")
 
     def ask_user_marital_status(self, user_id):
         while True:
@@ -86,10 +97,12 @@ class VKinderBot:
             if event.type == VkEventType.MESSAGE_NEW and event.to_me and event.user_id == user_id:
                 return event.text
 
-    def get_matches(self, age_from, age_to, gender, city_id, marital_status):
+    def get_matches(self, age_from, age_to, gender, city_id, marital_status, user_id):
         matches = []
-        for user in self.vk.users.search(count=50, fields='photo_max_orig', city=city_id, sex=self.get_gender_id(gender),
-                                          status=self.get_marital_status_id(marital_status), age_from=age_from, age_to=age_to)['items']:
+        for user in \
+        self.vk.users.search(count=50, fields='photo_max_orig', city=city_id, sex=self.get_gender_id(gender),
+                             status=self.get_marital_status_id(marital_status), age_from=age_from, age_to=age_to)[
+            'items']:
             if user['id'] not in self.db.get_matches(user_id):
                 matches.append(user)
         return matches
